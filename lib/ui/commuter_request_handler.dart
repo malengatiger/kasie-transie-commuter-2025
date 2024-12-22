@@ -15,9 +15,10 @@ import 'package:kasie_transie_library/utils/device_location_bloc.dart';
 import 'package:kasie_transie_library/utils/functions.dart';
 import 'package:kasie_transie_library/utils/navigator_utils.dart';
 import 'package:kasie_transie_library/utils/prefs.dart';
+import 'package:kasie_transie_library/widgets/dispatch_widget.dart';
 import 'package:kasie_transie_library/widgets/timer_widget.dart';
 import 'package:uuid/uuid.dart';
-
+import 'package:fluttertoast/fluttertoast.dart';
 class CommuterRequestHandler extends StatefulWidget {
   const CommuterRequestHandler(
       {super.key, required this.filteredRouteDistance});
@@ -52,7 +53,9 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
   }
 
   _getRoute() async {
-    route = await listApiDog.getRoute(widget.filteredRouteDistance.routeId);
+    route = await listApiDog.getRoute(routeId: widget.filteredRouteDistance.routeId, refresh: false);
+    pp('$mm route from routeId: ${route!.name}');
+    myPrettyJsonPrint(route!.toJson());
   }
 
   @override
@@ -88,10 +91,10 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
   _getTime() async {
     await Future.delayed(const Duration(milliseconds: 100));
     if (mounted) {
-      timeOfDay =
-          await showTimePicker(
-              barrierDismissible: false,
-              context: context, initialTime: TimeOfDay.now());
+      timeOfDay = await showTimePicker(
+          barrierDismissible: false,
+          context: context,
+          initialTime: TimeOfDay.now());
 
       pp('$mm timeOfDay: ${timeOfDay!.hour}:${timeOfDay!.minute} ${timeOfDay}');
       var dateNow = DateTime.now();
@@ -103,7 +106,7 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
         if (mounted) {
           showErrorToast(
               message:
-              'Date and Time needed should be later than the request time now',
+                  'Date and Time needed should be later than the request time now',
               context: context);
         }
         _getDate();
@@ -147,12 +150,15 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
           currentPosition: currentPosition,
           numberOfPassengers: numberOfPassengers);
 
-      pp('$mm ..... submit commuter request: ${cr.toJson()}');
-
+      pp('$mm ..... submit commuter request, check associationId: ${cr.toJson()}');
+      pp('$mm ..... subscribe to dispatch ... associationId: ${route!.associationId!}');
+      fcm.subscribeForCommuterDispatch("Dispatch", cr.associationId!);
       var res = await dataApiDog.addCommuterRequest(cr);
       fcm.addCommuterRequest(cr);
+
       if (mounted) {
         showOKToast(
+            toastGravity: ToastGravity.BOTTOM,
             message: 'Taxi request has been sent successfully',
             context: context);
       }
@@ -184,6 +190,7 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
       time.minute,
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -221,7 +228,7 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
                     child: Padding(
                       padding: EdgeInsets.all(16),
                       child: Text(widget.filteredRouteDistance.routeName,
-                          style: myTextStyle(fontSize: 20)),
+                          style: myTextStyle(fontSize: 16, weight: FontWeight.w900)),
                     )),
               ),
               gapH32,
@@ -238,7 +245,7 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
                       '${timeOfDay!.hour}:${timeOfDay!.minute}  ${timeOfDay!.period.name.toUpperCase()}',
                       style: myTextStyle(
                           weight: FontWeight.w900,
-                          fontSize: 40,
+                          fontSize: 48,
                           color: Colors.grey),
                     ),
               gapH32,
@@ -261,6 +268,16 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
                         DropdownMenuItem<int>(value: 8, child: Text('8')),
                         DropdownMenuItem<int>(value: 9, child: Text('9')),
                         DropdownMenuItem<int>(value: 10, child: Text('10')),
+                        DropdownMenuItem<int>(value: 11, child: Text('11')),
+                        DropdownMenuItem<int>(value: 12, child: Text('12')),
+                        DropdownMenuItem<int>(value: 13, child: Text('13')),
+                        DropdownMenuItem<int>(value: 14, child: Text('14')),
+                        DropdownMenuItem<int>(value: 15, child: Text('15')),
+                        DropdownMenuItem<int>(value: 16, child: Text('16')),
+                        DropdownMenuItem<int>(value: 17, child: Text('17')),
+                        DropdownMenuItem<int>(value: 18, child: Text('18')),
+                        DropdownMenuItem<int>(value: 19, child: Text('19')),
+                        DropdownMenuItem<int>(value: 20, child: Text('20')),
                       ],
                       onChanged: (number) {
                         setState(() {

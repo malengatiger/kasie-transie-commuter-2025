@@ -12,7 +12,6 @@ import 'package:kasie_transie_library/utils/device_location_bloc.dart';
 import 'package:kasie_transie_library/utils/functions.dart';
 import 'package:kasie_transie_library/utils/navigator_utils.dart';
 import 'package:kasie_transie_library/widgets/timer_widget.dart';
-import 'package:kasie_transie_library/widgets/number_widget.dart';
 
 class CommuterNearestRoutes extends StatefulWidget {
   const CommuterNearestRoutes({super.key});
@@ -45,9 +44,12 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
     await fcmService.initialize();
     fcmService.subscribeForCommuter('Commuter');
   }
+
   _navigateToCommuterRequest() async {
-    NavigationUtils.navigateTo(context: context,
-        widget: CommuterRequestHandler(filteredRouteDistance: filteredRouteDistance!));
+    NavigationUtils.navigateTo(
+        context: context,
+        widget: CommuterRequestHandler(
+            filteredRouteDistance: filteredRouteDistance!));
   }
 
   @override
@@ -59,6 +61,7 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
   List<FilteredRouteDistance> filteredRouteDistances = [];
   FilteredRouteDistance? filteredRouteDistance;
   double radiusInKM = 2;
+
   Future _getNearestRoutes() async {
     pp('... _getNearestRoutes ... ');
 
@@ -100,14 +103,15 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
     });
   }
 
-  static const mm = '💙💙💙💙Commuter Dashboard 💙';
+  static const mm = '💙💙💙💙CommuterNearestRoutes 💙';
   FilteredRouteDistance? routeDistance;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
           title: Text(
-            'Commuter Dashboard',
+            'Nearest Taxi Routes',
             style: myTextStyle(),
           ),
           actions: [
@@ -128,56 +132,83 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
                   : Column(
                       children: [
                         gapH32,
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Text('Routes within $radiusInKM km',
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Text('Routes within $radiusInKM km',
+                                  style: myTextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 16,
+                                      weight: FontWeight.w900)),
+                              DropdownButton<int>(
+                                  dropdownColor: Colors.white,
+                                  items: [
+                                    DropdownMenuItem<int>(
+                                      value: 1,
+                                      child: Text('1 km'),
+                                    ),
+                                    DropdownMenuItem<int>(
+                                      value: 2,
+                                      child: Text('2 km'),
+                                    ),
+                                    DropdownMenuItem<int>(
+                                      value: 3,
+                                      child: Text('3 km'),
+                                    ),
+                                    DropdownMenuItem<int>(
+                                      value: 4,
+                                      child: Text('4 km'),
+                                    ),
+                                    DropdownMenuItem<int>(
+                                      value: 5,
+                                      child: Text('5 km'),
+                                    ),
+                                    DropdownMenuItem<int>(
+                                      value: 6,
+                                      child: Text('6 km'),
+                                    ),
+                                    DropdownMenuItem<int>(
+                                      value: 7,
+                                      child: Text('7 km'),
+                                    ),
+                                    DropdownMenuItem<int>(
+                                      value: 8,
+                                      child: Text('8 km'),
+                                    ),
+                                    DropdownMenuItem<int>(
+                                      value: 9,
+                                      child: Text('9 km'),
+                                    ),
+                                    DropdownMenuItem<int>(
+                                      value: 10,
+                                      child: Text('10 km'),
+                                    ),
+                                  ],
+                                  onChanged: (number) {
+                                    if (number != null) {
+                                      setState(() {
+                                        radiusInKM = number.toDouble();
+                                      });
+                                      _getNearestRoutes();
+                                    }
+                                  }),
+                              gapW16,
+                              Text(
+                                '$radiusInKM',
                                 style: myTextStyle(
-                                    fontSize: 20, weight: FontWeight.w900)),
-                            DropdownButton<int>(
-                              dropdownColor: Colors.white,
-                                items: [
-                                  DropdownMenuItem<int>(
-                                    value: 1,
-                                    child: Text('1 km'),
-                                  ),
-                                  DropdownMenuItem<int>(
-                                    value: 2,
-                                    child: Text('2 km'),
-                                  ),
-                                  DropdownMenuItem<int>(
-                                    value: 3,
-                                    child: Text('3 km'),
-                                  ),
-                                  DropdownMenuItem<int>(
-                                    value: 4,
-                                    child: Text('4 km'),
-                                  ),
-                                  DropdownMenuItem<int>(
-                                    value: 5,
-                                    child: Text('5 km'),
-                                  ),
-                                ],
-                                onChanged: (number) {
-                                  if (number != null) {
-                                    setState(() {
-                                      radiusInKM = number.toDouble();
-                                    });
-                                    _getNearestRoutes();
-                                  }
-                                }),
-                            Text(
-                              '$radiusInKM',
-                              style: myTextStyle(
-                                  weight: FontWeight.w900, fontSize: 20, color: Colors.red),
-                            )
-                          ],
+                                    weight: FontWeight.w900,
+                                    fontSize: 20,
+                                    color: Colors.red),
+                              )
+                            ],
+                          ),
                         ),
-                        gapH32,
                         gapH32,
                         Expanded(
                             child: bd.Badge(
-                          position: bd.BadgePosition.topEnd(top: -48, end: 8),
+                          position: bd.BadgePosition.topEnd(top: -36, end: 8),
                           badgeContent: Text(
                             '${filteredRouteDistances.length}',
                             style: myTextStyle(color: Colors.white),
@@ -193,33 +224,34 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
                                 itemBuilder: (ctx, index) {
                                   var frd = filteredRouteDistances[index];
                                   return GestureDetector(
-                                    onTap: (){
-                                      setState(() {
-                                        filteredRouteDistance = frd;
-                                      });
-                                      _navigateToCommuterRequest();
-
-                                    },
-                                    child: Card(
-                                        elevation: 8,
-                                        child: Column(
-                                          children: [
-                                            Padding(
-                                                padding: EdgeInsets.all(8),
-                                                child: Row(
-                                                  children: [
-                                                    Flexible(
-                                                      child: Text(frd.routeName,
-                                                          style: myTextStyle(
-                                                              fontSize: 16,
-                                                              weight: FontWeight
-                                                                  .normal)),
-                                                    ),
-                                                  ],
-                                                )),
-                                          ],
-                                        ))
-                                  );
+                                      onTap: () {
+                                        setState(() {
+                                          filteredRouteDistance = frd;
+                                        });
+                                        _navigateToCommuterRequest();
+                                      },
+                                      child: Card(
+                                          elevation: 8,
+                                          child: Column(
+                                            children: [
+                                              Padding(
+                                                  padding: EdgeInsets.all(20),
+                                                  child: Row(
+                                                    children: [
+                                                      SizedBox(width: 20, child: Text('${index + 1}',
+                                                        style: myTextStyle(color: Colors.blue, fontSize: 12, weight: FontWeight.w900),)),
+                                                      Flexible(
+                                                        child: Text(
+                                                            frd.routeName,
+                                                            style: myTextStyle(
+                                                                fontSize: 15,
+                                                                weight: FontWeight
+                                                                    .normal)),
+                                                      ),
+                                                    ],
+                                                  )),
+                                            ],
+                                          )));
                                 }),
                           ),
                         )),

@@ -42,7 +42,15 @@ android {
         }
     }
 }
+dependencies {
+    implementation platform('org.jetbrains.kotlin:kotlin-bom')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8" // Or latest
+    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation project(':flutter_plugin_android_lifecycle')
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
 
+    // ... other dependencies
+}
 flutter {
     source = "../.."
 }
