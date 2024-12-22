@@ -7,6 +7,7 @@ import 'package:get_it/get_it.dart';
 import 'package:kasie_transie_commuter_2025/ui/commuter_request_handler.dart';
 import 'package:kasie_transie_library/bloc/list_api_dog.dart';
 import 'package:kasie_transie_library/data/data_schemas.dart' as lib;
+import 'package:kasie_transie_library/messaging/fcm_bloc.dart';
 import 'package:kasie_transie_library/utils/device_location_bloc.dart';
 import 'package:kasie_transie_library/utils/functions.dart';
 import 'package:kasie_transie_library/utils/navigator_utils.dart';
@@ -26,6 +27,7 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
 
   DeviceLocationBloc dlb = GetIt.instance<DeviceLocationBloc>();
   ListApiDog listApiDog = GetIt.instance<ListApiDog>();
+  FCMService fcmService = GetIt.instance<FCMService>();
 
   List<lib.Route> routes = [];
   bool busy = false;
@@ -35,9 +37,14 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
   void initState() {
     _controller = AnimationController(vsync: this);
     super.initState();
+    _subscribe();
     _getNearestRoutes();
   }
 
+  _subscribe() async {
+    await fcmService.initialize();
+    fcmService.subscribeForCommuter('Commuter');
+  }
   _navigateToCommuterRequest() async {
     NavigationUtils.navigateTo(context: context,
         widget: CommuterRequestHandler(filteredRouteDistance: filteredRouteDistance!));

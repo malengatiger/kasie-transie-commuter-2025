@@ -89,8 +89,27 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
     await Future.delayed(const Duration(milliseconds: 100));
     if (mounted) {
       timeOfDay =
-          await showTimePicker(context: context, initialTime: TimeOfDay.now());
-      pp('$mm timeOfDay: ${timeOfDay.toString}');
+          await showTimePicker(
+              barrierDismissible: false,
+              context: context, initialTime: TimeOfDay.now());
+
+      pp('$mm timeOfDay: ${timeOfDay!.hour}:${timeOfDay!.minute} ${timeOfDay}');
+      var dateNow = DateTime.now();
+      var dateNeeded = mergeDateTimeAndTimeOfDay(dateTime!, timeOfDay!)
+          .toUtc()
+          .toIso8601String();
+      var dn = DateTime.parse(dateNeeded);
+      if (dateNow.isAfter(dn)) {
+        if (mounted) {
+          showErrorToast(
+              message:
+              'Date and Time needed should be later than the request time now',
+              context: context);
+        }
+        _getDate();
+        return;
+      }
+
       setState(() {});
     }
   }
@@ -115,6 +134,7 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
       var dateNeeded = mergeDateTimeAndTimeOfDay(dateTime!, timeOfDay!)
           .toUtc()
           .toIso8601String();
+
       var cr = lib.CommuterRequest(
           commuterId: commuter!.commuterId,
           commuterRequestId: Uuid().v4().toString(),
@@ -138,8 +158,11 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
       }
       if (mounted) {
         Navigator.of(context).pop();
-        NavigationUtils.navigateTo(context: context, widget: ResponseWidget(
-          commuterRequest: cr,));
+        NavigationUtils.navigateTo(
+            context: context,
+            widget: ResponseWidget(
+              commuterRequest: cr,
+            ));
       }
     } catch (e, s) {
       pp('$e $s');
@@ -222,9 +245,9 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  gapW32,
+                  gapW16,
                   const Text('Number of Passengers'),
-                  gapW32,
+                  gapW16,
                   DropdownButton<int>(
                       dropdownColor: Colors.white,
                       items: [
