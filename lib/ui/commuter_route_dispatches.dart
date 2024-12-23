@@ -32,7 +32,10 @@ class CommuterRouteDispatchMonitor extends StatefulWidget {
 
 class _CommuterRouteDispatchMonitorState
     extends State<CommuterRouteDispatchMonitor> {
-  final List<lib.DispatchRecord> dispatchRecords = [];
+   List<lib.DispatchRecord> dispatchRecords = [];
+
+  ListApiDog listApiDog = GetIt.instance<ListApiDog>();
+
   FCMService fcmService = GetIt.instance<FCMService>();
   late StreamSubscription<lib.CommuterResponse> _commuterResponseSubscription;
   late StreamSubscription<lib.DispatchRecord> _dispatchRecordSubscription;
@@ -46,6 +49,25 @@ class _CommuterRouteDispatchMonitorState
       dispatchRecords.add(widget.dispatchRecord!);
     }
     _listen();
+    _getLatestDispatches();
+  }
+
+  bool busy = false;
+  _getLatestDispatches() async {
+    setState(() {
+      busy = true;
+    });
+    try {
+      var date = DateTime.now().toUtc().subtract(const Duration(hours: 1));
+      dispatchRecords = await listApiDog.getRouteDispatchRecords(routeId: widget.commuterRequest.routeId!,
+               startDate: date.toIso8601String());
+      dispatchRecords.sort((a,b) => b.created!.compareTo(a.created!));
+    } catch (e, s) {
+      pp('$e $s');
+    }
+    setState(() {
+      busy = false;
+    });
   }
 
   _listen() async {
@@ -219,7 +241,7 @@ class _CommuterRouteDispatchMonitorState
                                 showToast(
                                     toastGravity: ToastGravity.BOTTOM,
                                     textStyle: myTextStyle(color: Colors.white),
-                                    backgroundColor: Colors.brown,
+                                    backgroundColor: Colors.pink,
                                     message: 'Pick Up under construction. Be here soon!', context: context);
                               },
                               child: Card(
