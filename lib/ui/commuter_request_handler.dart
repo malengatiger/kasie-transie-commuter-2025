@@ -150,9 +150,11 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
           currentPosition: currentPosition,
           numberOfPassengers: numberOfPassengers);
 
-      pp('$mm ..... submit commuter request, check associationId: ${cr.toJson()}');
-      pp('$mm ..... subscribe to dispatch ... associationId: ${route!.associationId!}');
-      fcm.subscribeForCommuterDispatch("Dispatch", cr.associationId!);
+      pp('$mm ..... submit commuter request, check associationId}');
+      myPrettyJsonPrint(cr.toJson());
+      pp('$mm ..... subscribe to dispatch stream... associationId: ${route!.associationId!}');
+
+      await fcm.subscribeForCommuterDispatch("Dispatch", cr.associationId!);
       var res = await dataApiDog.addCommuterRequest(cr);
       fcm.addCommuterRequest(cr);
 

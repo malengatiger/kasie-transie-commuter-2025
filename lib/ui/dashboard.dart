@@ -60,7 +60,7 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
 
   List<FilteredRouteDistance> filteredRouteDistances = [];
   FilteredRouteDistance? filteredRouteDistance;
-  double radiusInKM = 2;
+  double radiusInKM = 5;
 
   Future _getNearestRoutes() async {
     pp('... _getNearestRoutes ... ');
@@ -69,6 +69,7 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
       busy = true;
     });
     var loc = await dlb.getLocation();
+
     routePoints = await listApiDog.findRoutePointsByLocation(
         latitude: loc.latitude,
         longitude: loc.longitude,

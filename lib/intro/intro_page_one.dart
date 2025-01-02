@@ -111,7 +111,7 @@ class IntroPageState extends State<IntroPage> with TickerProviderStateMixin {
                                 const EdgeInsets.symmetric(horizontal: 24.0),
                             child: Text(
                               widget.title,
-                              style: myTextStyleLargeWithColor(context, color),
+                              style: myTextStyle(color: Colors.white, weight: FontWeight.w900, fontSize: 20),
                             ),
                           ),
                         ),
@@ -141,7 +141,7 @@ class IntroPageState extends State<IntroPage> with TickerProviderStateMixin {
                                       padding: const EdgeInsets.all(16.0),
                                       child: Text(
                                         widget.text,
-                                        style: myTextStyleMedium(context),
+                                        style: myTextStyle(color: Colors.white),
                                       ),
                                     ),
                                   ),

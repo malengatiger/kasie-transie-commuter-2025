@@ -11,8 +11,9 @@ import 'package:kasie_transie_library/utils/functions.dart';
 import 'package:kasie_transie_library/utils/navigator_utils.dart';
 import 'package:kasie_transie_library/utils/prefs.dart';
 import 'package:kasie_transie_library/widgets/qrcodes/qr_code_generation.dart';
+import 'package:kasie_transie_library/widgets/timer_widget.dart';
 import 'package:uuid/uuid.dart';
-
+import 'package:permission_handler/permission_handler.dart';
 import '../ui/dashboard.dart';
 import 'intro_page_one.dart';
 
@@ -50,6 +51,7 @@ class KasieIntroState extends State<KasieIntro>
     super.initState();
     _getAuthenticationStatus();
   }
+
 
   void _getAuthenticationStatus() async {
     pp('\n\n$mm _getAuthenticationStatus ....... '
@@ -106,9 +108,7 @@ class KasieIntroState extends State<KasieIntro>
 
 
     try {
-      var bucket = await qrGeneration.generateAndUploadQrCodeWithLogo(
-          data: c.toJson(), associationId: null);
-      c.qrCodeUrl = bucket?.qrCodeUrl;
+
       pp('$mm ...  onSignInWithEmail, commuter to create: ${c.toJson()}');
       var res = await dataApiDog.addCommuter(c);
       prefs.saveCommuter(res);
@@ -153,9 +153,13 @@ class KasieIntroState extends State<KasieIntro>
     pp('$mm ... onFailedSignIn ....');
   }
 
-  void onSuccessfulSignIn() {
+  Future<void> onSuccessfulSignIn() async {
     pp('$mm ................................'
-        '... onSuccessfulSignIn .... ');
+        '... onSuccessfulSignIn .... get location permission  ');
+    var ok = await Permission.location.isGranted;
+    if (!ok) {
+      await Permission.location.request();
+    }
     commuter = prefs.getCommuter();
     _navigateToDashboard();
   }
@@ -200,29 +204,7 @@ class KasieIntroState extends State<KasieIntro>
           'KasieTransie Commuter',
           style: myTextStyle(),
         ),
-        bottom: PreferredSize(
-            preferredSize: Size.fromHeight(authed ? 80 : 124),
-            child: Column(
-              children: [
-                SizedBox(
-                    width: 300,
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: ElevatedButton(
-                         style: ButtonStyle(
-                             elevation: WidgetStatePropertyAll(8),
-                             backgroundColor: WidgetStatePropertyAll(Colors.blue)),
-                          onPressed: () {
-                            onSignInWithEmail();
-                          },
-                          child: Text(
-                            'Sign In',
-                            style: myTextStyle(fontSize: 20, color: Colors.white),
-                          )),
-                    )),
-                gapH16,
-              ],
-            )),
+
       ),
       body: Stack(
         children: [
@@ -256,7 +238,27 @@ class KasieIntroState extends State<KasieIntro>
             ],
           ),
           Positioned(
-            bottom: 2,
+            bottom: 2, left: 48, right: 48,
+            child:  SizedBox(
+                width: 300,
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: ElevatedButton(
+                      style: ButtonStyle(
+                          elevation: WidgetStatePropertyAll(8),
+                          backgroundColor: WidgetStatePropertyAll(Colors.blue)),
+                      onPressed: () {
+                        onSignInWithEmail();
+                      },
+                      child: Text(
+                        'Sign In',
+                        style: myTextStyle(fontSize: 20, color: Colors.white),
+                      )),
+                )),
+
+          ),
+          Positioned(
+            bottom: 88,
             left: 48,
             right: 40,
             child: SizedBox(
@@ -288,6 +290,7 @@ class KasieIntroState extends State<KasieIntro>
               ),
             ),
           ),
+          busy? Positioned(child: Center(child: TimerWidget(title: 'Authenticating ...', isSmallSize: true,))): gapH32,
         ],
       ),
     ));

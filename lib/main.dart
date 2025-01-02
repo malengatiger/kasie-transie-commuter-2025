@@ -16,7 +16,7 @@ import 'package:get_it/get_it.dart';
 import 'firebase_options.dart';
 import 'intro/kasie_intro.dart';
 import 'intro/splash_page.dart';
-
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 late FirebaseApp firebaseApp;
 fb.User? fbAuthedUser;
 late KasieThemeManager kasieThemeManager;
@@ -45,7 +45,8 @@ Future<void> main() async {
   } catch (e) {
     pp('$mx Houston, we have a problem! $e');
   }
-
+  var initializationSettingsAndroid =
+  AndroidInitializationSettings('@mipmap/ic_launcher');
   // Set up Background message handler
   FirebaseMessaging.onBackgroundMessage(kasieFirebaseMessagingBackgroundHandler);
 

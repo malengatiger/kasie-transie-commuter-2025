@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:badges/badges.dart' as bd;
 import 'package:flutter/material.dart';
@@ -61,7 +62,16 @@ class _CommuterRouteDispatchMonitorState
       var date = DateTime.now().toUtc().subtract(const Duration(hours: 1));
       dispatchRecords = await listApiDog.getRouteDispatchRecords(routeId: widget.commuterRequest.routeId!,
                startDate: date.toIso8601String());
+
       dispatchRecords.sort((a,b) => b.created!.compareTo(a.created!));
+      HashMap<String, lib.DispatchRecord> hash = HashMap();
+     for (var dr in dispatchRecords) {
+       if (hash[dr.vehicleId] == null) {
+         hash[dr.vehicleId!] = dr;
+       }
+     }
+     dispatchRecords = hash.values.toList();
+     dispatchRecords.sort((a,b) => b.created!.compareTo(a.created!));
     } catch (e, s) {
       pp('$e $s');
     }
