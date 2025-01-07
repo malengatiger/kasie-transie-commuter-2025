@@ -4,14 +4,18 @@ import 'package:badges/badges.dart' as bd;
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get_it/get_it.dart';
+import 'package:kasie_transie_commuter_2025/commuter_sem_cache.dart';
 import 'package:kasie_transie_commuter_2025/ui/commuter_request_handler.dart';
 import 'package:kasie_transie_library/bloc/list_api_dog.dart';
+import 'package:kasie_transie_library/bloc/sem_cache.dart';
 import 'package:kasie_transie_library/data/data_schemas.dart' as lib;
 import 'package:kasie_transie_library/messaging/fcm_bloc.dart';
 import 'package:kasie_transie_library/utils/device_location_bloc.dart';
 import 'package:kasie_transie_library/utils/functions.dart';
 import 'package:kasie_transie_library/utils/navigator_utils.dart';
+import 'package:kasie_transie_library/utils/prefs.dart';
 import 'package:kasie_transie_library/widgets/timer_widget.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 
 class CommuterNearestRoutes extends StatefulWidget {
   const CommuterNearestRoutes({super.key});
@@ -27,6 +31,8 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
   DeviceLocationBloc dlb = GetIt.instance<DeviceLocationBloc>();
   ListApiDog listApiDog = GetIt.instance<ListApiDog>();
   FCMService fcmService = GetIt.instance<FCMService>();
+  Prefs prefs = GetIt.instance<Prefs>();
+  final CommuterSemCache commuterSemCache = CommuterSemCache();
 
   List<lib.Route> routes = [];
   bool busy = false;
@@ -36,20 +42,46 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
   void initState() {
     _controller = AnimationController(vsync: this);
     super.initState();
-    _subscribe();
-    _getNearestRoutes();
+    _getCommuterRoutes();
   }
 
-  _subscribe() async {
-    await fcmService.initialize();
-    fcmService.subscribeForCommuter('Commuter');
+  List<lib.Route> commuterRoutes = [];
+
+  _getCommuterRoutes() async {
+    commuterRoutes = await commuterSemCache.getCommuterRoutes();
+    pp('$mm _getCommuterRoutes from semCache : ${commuterRoutes.length}');
+    await Future.delayed(const Duration(milliseconds: 100));
+    if (mounted) {
+      if (commuterRoutes.isNotEmpty) {
+        _selectSavedRouteDialog();
+      } else {
+        _getNearestRoutes();
+      }
+      setState(() {});
+    }
   }
 
-  _navigateToCommuterRequest() async {
+  _selectSavedRouteDialog() async {
+    var route = await NavigationUtils.navigateTo(
+      context: context,
+      widget: CommuterRoutes(
+        routes: commuterRoutes,
+      ),
+    );
+    if (route != null) {
+      _navigateToCommuterRequest(route.routeId!, route.name!);
+    } else {
+      _getNearestRoutes();
+    }
+  }
+
+  _navigateToCommuterRequest(String routeId, String routeName) async {
     NavigationUtils.navigateTo(
         context: context,
         widget: CommuterRequestHandler(
-            filteredRouteDistance: filteredRouteDistance!));
+          routeId: routeId,
+          routeName: routeName,
+        ));
   }
 
   @override
@@ -58,9 +90,10 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
     super.dispose();
   }
 
-  List<FilteredRouteDistance> filteredRouteDistances = [];
+  List<FilteredRouteDistance> filteredRoutes = [];
   FilteredRouteDistance? filteredRouteDistance;
   double radiusInKM = 5;
+  // List<Route> routes = [];
 
   Future _getNearestRoutes() async {
     pp('... _getNearestRoutes ... ');
@@ -68,6 +101,10 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
     setState(() {
       busy = true;
     });
+
+    var c = prefs.getCommuter();
+    await auth.FirebaseAuth.instance
+        .signInWithEmailAndPassword(email: c!.email!, password: c.password!);
     var loc = await dlb.getLocation();
 
     routePoints = await listApiDog.findRoutePointsByLocation(
@@ -77,27 +114,43 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
 
     var distances = await dlb.getRoutePointDistances(routePoints: routePoints!);
     List<FilteredRouteDistance> frd = [];
+    HashMap<String, lib.Route> map = HashMap();
+    for (var f in distances) {
+      if (map[f.routePoint.routeId] == null) {
+        var route = await listApiDog.getRoute(
+            routeId: f.routePoint.routeId!, refresh: false);
+
+        map[f.routePoint.routeId!] = route!;
+      }
+    }
+
+    for (var r in map.values.toList()) {
+      await commuterSemCache.saveRoute(r);
+    }
 
     for (var bag in distances) {
-      frd.add(FilteredRouteDistance(
-          routeId: bag.routePoint.routeId!,
-          routeName: bag.routePoint.routeName!,
-          distance: bag.distance,
-          position: bag.routePoint.position!));
+      var route = map[bag.routePoint.routeId!];
+      // route ??= await listApiDog.getRoute(routeId: bag.routePoint.routeId! , refresh: false);
+      if (route != null) {
+        frd.add(FilteredRouteDistance(
+            route: route,
+            distance: bag.distance,
+            position: bag.routePoint.position!));
+      }
     }
     pp('$mm ... filteredRouteDistances: ${frd.length} ');
 
-    HashMap<String, FilteredRouteDistance> map = HashMap();
+    HashMap<String, FilteredRouteDistance> map2 = HashMap();
     for (var f in frd) {
-      if (map[f.routeName] == null) {
-        map[f.routeName] = f;
+      if (map2[f.route.name] == null) {
+        map2[f.route.name!] = f;
       }
     }
-    filteredRouteDistances = map.values.toList();
-    filteredRouteDistances.sort((a, b) => a.distance.compareTo(b.distance));
-    pp('$mm ... filteredRouteDistances after re-filter: ${filteredRouteDistances.length} ');
-    for (var f in filteredRouteDistances) {
-      pp('$mm Route: ${f.distance} metres  🍎 ${f.routeName}');
+    filteredRoutes = map2.values.toList();
+    filteredRoutes.sort((a, b) => a.distance.compareTo(b.distance));
+    pp('$mm ... filteredRouteDistances after re-filter: ${filteredRoutes.length} ');
+    for (var f in filteredRoutes) {
+      pp('$mm Route: ${f.distance} metres  🍎 ${f.route.name}');
     }
     setState(() {
       busy = false;
@@ -126,9 +179,9 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
         body: SafeArea(
           child: Stack(
             children: [
-              filteredRouteDistances.isEmpty
-                  ? Center(
-                      child: const Text('There are no taxi routes within 5 km'),
+              filteredRoutes.isEmpty
+                  ? const Center(
+                      child: Text('Still searching for taxi routes ....'),
                     )
                   : Column(
                       children: [
@@ -211,7 +264,7 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
                             child: bd.Badge(
                           position: bd.BadgePosition.topEnd(top: -36, end: 8),
                           badgeContent: Text(
-                            '${filteredRouteDistances.length}',
+                            '${filteredRoutes.length}',
                             style: myTextStyle(color: Colors.white),
                           ),
                           badgeStyle: bd.BadgeStyle(
@@ -221,15 +274,21 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
                           child: Padding(
                             padding: EdgeInsets.all(16),
                             child: ListView.builder(
-                                itemCount: filteredRouteDistances.length,
+                                itemCount: filteredRoutes.length,
                                 itemBuilder: (ctx, index) {
-                                  var frd = filteredRouteDistances[index];
+                                  var frd = filteredRoutes[index];
                                   return GestureDetector(
-                                      onTap: () {
+                                      onTap: () async {
                                         setState(() {
                                           filteredRouteDistance = frd;
                                         });
-                                        _navigateToCommuterRequest();
+
+                                        await commuterSemCache
+                                            .saveCommuterRoute(frd.route);
+
+                                        _navigateToCommuterRequest(
+                                            frd.route.routeId!,
+                                            frd.route.name!);
                                       },
                                       child: Card(
                                           elevation: 8,
@@ -239,11 +298,21 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
                                                   padding: EdgeInsets.all(20),
                                                   child: Row(
                                                     children: [
-                                                      SizedBox(width: 20, child: Text('${index + 1}',
-                                                        style: myTextStyle(color: Colors.blue, fontSize: 12, weight: FontWeight.w900),)),
+                                                      SizedBox(
+                                                          width: 20,
+                                                          child: Text(
+                                                            '${index + 1}',
+                                                            style: myTextStyle(
+                                                                color:
+                                                                    Colors.blue,
+                                                                fontSize: 12,
+                                                                weight:
+                                                                    FontWeight
+                                                                        .w900),
+                                                          )),
                                                       Flexible(
                                                         child: Text(
-                                                            frd.routeName,
+                                                            frd.route.name!,
                                                             style: myTextStyle(
                                                                 fontSize: 15,
                                                                 weight: FontWeight
@@ -265,21 +334,96 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
                       title: 'Finding nearest taxi routes ..',
                       isSmallSize: true,
                     )))
-                  : gapW32,
+                  : gapW32
             ],
           ),
         ));
   }
 }
 
+class CommuterRoutes extends StatelessWidget {
+  const CommuterRoutes({super.key, required this.routes});
+  final List<lib.Route> routes;
+  @override
+  Widget build(BuildContext context) {
+    SemCache semCache = GetIt.instance<SemCache>();
+
+    return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Your Previous Routes',
+            style: myTextStyle(),
+          ),
+        ),
+        body: SafeArea(
+            child: Stack(
+          children: [
+            Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Tap to select a previous route',
+                      style: myTextStyle(fontSize: 18, weight: FontWeight.w900),
+                    ),
+                    gapH32,
+                    gapH32,
+                    Expanded(
+                      child: ListView.builder(
+                          itemCount: routes.length,
+                          itemBuilder: (ctx, index) {
+                            var route = routes[index];
+                            return GestureDetector(
+                              onTap: () {
+                                semCache.saveCommuterRoute(route);
+                                Navigator.of(context).pop(route);
+                              },
+                              child: Card(
+                                elevation: 8,
+                                child: Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: InkWell(
+                                      child: Text('${route.name}'),
+                                      onTap: () {
+                                        semCache.saveCommuterRoute(route);
+                                        Navigator.of(context).pop(route);
+                                      },
+                                    )),
+                              ),
+                            );
+                          }),
+                    )
+                  ],
+                )),
+            Positioned(
+                bottom: 24,
+                right: 16,
+                child: SizedBox(
+                  width: 100,
+                  child: ElevatedButton(
+                      style: ButtonStyle(
+                          backgroundColor: WidgetStatePropertyAll(Colors.grey),
+                          elevation: WidgetStatePropertyAll(4)),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: Text(
+                        'Cancel',
+                        style: myTextStyle(color: Colors.white),
+                      )),
+                )),
+          ],
+        )));
+  }
+}
+
 class FilteredRouteDistance {
-  final String routeId, routeName;
+  final lib.Route route;
   final double distance;
   final lib.Position position;
 
   FilteredRouteDistance(
-      {required this.routeId,
-      required this.routeName,
-      required this.distance,
-      required this.position});
+      {required this.route, required this.distance, required this.position});
 }

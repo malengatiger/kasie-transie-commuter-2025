@@ -25,15 +25,9 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -47,32 +41,49 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDcAXlT6hoou41oEgIbjRTCagAJzBTsZIM',
-    appId: '1:854189510560:web:4e6e9f73ae347af536dec5',
-    messagingSenderId: '854189510560',
-    projectId: 'kasie-transie-3',
-    authDomain: 'kasie-transie-3.firebaseapp.com',
-    storageBucket: 'kasie-transie-3.appspot.com',
-    measurementId: 'G-BQW5ZWEKB4',
+    apiKey: 'AIzaSyAbBpkSCLwy2p4dimBjXNh5XXIiQSz9FnI',
+    appId: '1:657690570978:web:eb0213c719834e4a646ebb',
+    messagingSenderId: '657690570978',
+    projectId: 'kasie-transie-4',
+    authDomain: 'kasie-transie-4.firebaseapp.com',
+    storageBucket: 'kasie-transie-4.firebasestorage.app',
+    measurementId: 'G-HH2PQG54B2',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyB3finIgPi481q3-GaEDjOLcoPbs664gTs',
-    appId: '1:854189510560:android:85ba3c3f8761c7c336dec5',
-    messagingSenderId: '854189510560',
-    projectId: 'kasie-transie-3',
-    storageBucket: 'kasie-transie-3.appspot.com',
+    apiKey: 'AIzaSyD5AGxqLVyDNjRoRRDYVcnBq6_HMPAu3MU',
+    appId: '1:657690570978:android:1aa4b2f6867aeb38646ebb',
+    messagingSenderId: '657690570978',
+    projectId: 'kasie-transie-4',
+    storageBucket: 'kasie-transie-4.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCBCW2jYebHUN609zOFxgTnm0JWP-1Y40s',
-    appId: '1:854189510560:ios:0ecad199a790a28d36dec5',
-    messagingSenderId: '854189510560',
-    projectId: 'kasie-transie-3',
-    storageBucket: 'kasie-transie-3.appspot.com',
-    androidClientId: '854189510560-01m01ag5podimppu4cl4smcaedmh8887.apps.googleusercontent.com',
-    iosClientId: '854189510560-7mvf7oh50v8hoqgggb8jsk6hahkj14b2.apps.googleusercontent.com',
+    apiKey: 'AIzaSyDp6_YeoB_osu_79GswDFtmegbU_8R4ISs',
+    appId: '1:657690570978:ios:8a2cefc1ae8aef25646ebb',
+    messagingSenderId: '657690570978',
+    projectId: 'kasie-transie-4',
+    storageBucket: 'kasie-transie-4.firebasestorage.app',
     iosBundleId: 'com.boha.kasieTransieCommuter2025',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyDp6_YeoB_osu_79GswDFtmegbU_8R4ISs',
+    appId: '1:657690570978:ios:8a2cefc1ae8aef25646ebb',
+    messagingSenderId: '657690570978',
+    projectId: 'kasie-transie-4',
+    storageBucket: 'kasie-transie-4.firebasestorage.app',
+    iosBundleId: 'com.boha.kasieTransieCommuter2025',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyAbBpkSCLwy2p4dimBjXNh5XXIiQSz9FnI',
+    appId: '1:657690570978:web:d5fe3753d529e147646ebb',
+    messagingSenderId: '657690570978',
+    projectId: 'kasie-transie-4',
+    authDomain: 'kasie-transie-4.firebaseapp.com',
+    storageBucket: 'kasie-transie-4.firebasestorage.app',
+    measurementId: 'G-HW0HV14FX5',
   );
 
 }

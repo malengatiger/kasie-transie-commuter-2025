@@ -6,6 +6,7 @@ import 'package:kasie_transie_library/auth/phone_auth_signin2.dart';
 import 'package:kasie_transie_library/bloc/app_auth.dart';
 import 'package:kasie_transie_library/bloc/data_api_dog.dart';
 import 'package:kasie_transie_library/data/data_schemas.dart';
+import 'package:kasie_transie_library/messaging/fcm_bloc.dart';
 import 'package:kasie_transie_library/utils/emojis.dart';
 import 'package:kasie_transie_library/utils/functions.dart';
 import 'package:kasie_transie_library/utils/navigator_utils.dart';
@@ -14,8 +15,9 @@ import 'package:kasie_transie_library/widgets/qrcodes/qr_code_generation.dart';
 import 'package:kasie_transie_library/widgets/timer_widget.dart';
 import 'package:uuid/uuid.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../ui/dashboard.dart';
+import '../ui/commuter_nearest_routes.dart';
 import 'intro_page_one.dart';
+import 'package:firebase_messaging/firebase_messaging.dart' as msg;
 
 class KasieIntro extends StatefulWidget {
   const KasieIntro({
@@ -38,8 +40,8 @@ class KasieIntroState extends State<KasieIntro>
   Prefs prefs = GetIt.instance<Prefs>();
   final DataApiDog dataApiDog = GetIt.instance<DataApiDog>();
   AppAuth appAuth = GetIt.instance<AppAuth>();
-  final QRGenerationService qrGeneration =
-      GetIt.instance<QRGenerationService>();
+  final FCMService fcmService =
+      GetIt.instance<FCMService>();
 
   // mrm.User? user;
   String? signInFailed;
@@ -96,21 +98,21 @@ class KasieIntroState extends State<KasieIntro>
     fb.UserCredential uc = await firebaseAuth.signInWithEmailAndPassword(
         email: email, password: pass);
 
-    var token = await uc.user?.getIdToken();
-    var c = Commuter(
+    var token = await msg.FirebaseMessaging.instance.getToken();
+    var commuter = Commuter(
         commuterId: uc.user?.uid,
         name: 'Commuter',
         countryId: null,
         dateRegistered: DateTime.now().toUtc().toIso8601String(),
         qrCodeUrl: null,
-        email: email,
+        email: email, password:  pass,
         fcmToken: token);
 
 
     try {
 
-      pp('$mm ...  onSignInWithEmail, commuter to create: ${c.toJson()}');
-      var res = await dataApiDog.addCommuter(c);
+      pp('$mm ...  onSignInWithEmail, commuter to create: ${commuter.toJson()}');
+      var res = await dataApiDog.addCommuter(commuter);
       prefs.saveCommuter(res);
       pp('$mm ...  onSignInWithEmail, commuter: ${res.toJson()}');
       if (mounted) {
@@ -172,6 +174,7 @@ class KasieIntroState extends State<KasieIntro>
   }
 
   _navigateToDashboard() async {
+    fcmService.initialize();
     await Future.delayed(const Duration(milliseconds: 500));
     pp('$mm _navigateToMarshalDashboard ...');
     if (mounted) {

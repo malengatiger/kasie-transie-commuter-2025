@@ -1,11 +1,12 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
-import 'package:kasie_transie_commuter_2025/ui/dashboard.dart';
-import 'package:kasie_transie_commuter_2025/ui/response_widget.dart';
 import 'package:kasie_transie_library/bloc/data_api_dog.dart';
 import 'package:kasie_transie_library/bloc/list_api_dog.dart';
 import 'package:kasie_transie_library/data/data_schemas.dart' as lib;
@@ -15,15 +16,18 @@ import 'package:kasie_transie_library/utils/device_location_bloc.dart';
 import 'package:kasie_transie_library/utils/functions.dart';
 import 'package:kasie_transie_library/utils/navigator_utils.dart';
 import 'package:kasie_transie_library/utils/prefs.dart';
-import 'package:kasie_transie_library/widgets/dispatch_widget.dart';
 import 'package:kasie_transie_library/widgets/timer_widget.dart';
 import 'package:uuid/uuid.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-class CommuterRequestHandler extends StatefulWidget {
-  const CommuterRequestHandler(
-      {super.key, required this.filteredRouteDistance});
+import 'package:badges/badges.dart' as bd;
 
-  final FilteredRouteDistance filteredRouteDistance;
+class CommuterRequestHandler extends StatefulWidget {
+  const CommuterRequestHandler({
+    super.key,
+    required this.routeId,
+    required this.routeName,
+  });
+
+  final String routeId, routeName;
 
   @override
   CommuterRequestHandlerState createState() => CommuterRequestHandlerState();
@@ -32,9 +36,8 @@ class CommuterRequestHandler extends StatefulWidget {
 class CommuterRequestHandlerState extends State<CommuterRequestHandler>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  static const mm = '';
+  static const mm = '💜💜💜💜CommuterRequestHandler 💜';
   DateFormat dateFormat = DateFormat.MMMMEEEEd();
-
   DataApiDog dataApiDog = GetIt.instance<DataApiDog>();
   ListApiDog listApiDog = GetIt.instance<ListApiDog>();
   Prefs prefs = GetIt.instance<Prefs>();
@@ -44,16 +47,78 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
   FirebaseAuth firebaseAuth = FirebaseAuth.instance;
   FirebaseMessaging firebaseMessaging = FirebaseMessaging.instance;
 
+  late StreamSubscription<lib.DispatchRecord> dispatchSub;
+
   @override
   void initState() {
     _controller = AnimationController(vsync: this);
     super.initState();
+    _listen();
     _getDate();
     _getRoute();
+    _startTimer();
+  }
+
+  List<lib.DispatchRecord> dispatches = [];
+  DateFormat df = DateFormat.MMMMEEEEd();
+
+  _listen() {
+    dispatchSub = fcm.dispatchStream.listen((dispatchRecord) {
+      pp('\n\n$mm ... routeDispatchStream delivered: ${dispatchRecord.toJson()}');
+      dispatches.add(dispatchRecord);
+      _filterDispatchRecords(dispatches);
+      if (mounted) {
+        showToast(
+            backgroundColor: Colors.blue.shade600,
+            textStyle: myTextStyle(
+                color: Colors.white, fontSize: 16, weight: FontWeight.w900),
+            padding: 20,
+            duration: const Duration(seconds: 5),
+            toastGravity: ToastGravity.BOTTOM,
+            message:
+                'Taxi ${dispatchRecord.vehicleReg} has been dispatched at ${df.format(DateTime.parse(dispatchRecord.created!))} on the route you requested',
+            context: context);
+      }
+    });
+  }
+
+  late Timer timer;
+
+  _startTimer() {
+    timer = Timer.periodic(const Duration(seconds: 60), (timer) {
+      pp('$mm _filterDispatchRecords: Timer tick #${timer.tick} ');
+      if (mounted) {
+        _filterDispatchRecords(dispatches);
+      }
+    });
+  }
+
+  List<lib.DispatchRecord> _filterDispatchRecords(
+      List<lib.DispatchRecord> dispatchRecords) {
+    pp('$mm _filterDispatchRecords : ${dispatchRecords.length}');
+
+    List<lib.DispatchRecord> filtered = [];
+    DateTime now = DateTime.now().toUtc();
+    for (var r in dispatchRecords) {
+      var date = DateTime.parse(r.created!!);
+      var difference = now.difference(date);
+      pp('$mm _filterDispatchRecords difference: $difference');
+
+      if (difference <= const Duration(hours: 1)) {
+        filtered.add(r);
+      }
+    }
+    pp('$mm _filterDispatchRecord filtered: ${filtered.length}');
+    filtered.sort((a, b) => b.created!.compareTo(a.created!),);
+    setState(() {
+      dispatches = filtered;
+      showRouteDispatches = true;
+    });
+    return filtered;
   }
 
   _getRoute() async {
-    route = await listApiDog.getRoute(routeId: widget.filteredRouteDistance.routeId, refresh: false);
+    route = await listApiDog.getRoute(routeId: widget.routeId, refresh: false);
     pp('$mm route from routeId: ${route!.name}');
     myPrettyJsonPrint(route!.toJson());
   }
@@ -82,8 +147,10 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
       );
       if (dateTime != null) {
         pp('$mm ... date: ${dateTime!.toUtc().toIso8601String()}');
-        setState(() {});
         _getTime();
+        setState(() {
+          showSubmit = true;
+        });
       }
     }
   }
@@ -118,11 +185,14 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
   }
 
   bool busy = false;
+  lib.CommuterRequest? commuterRequest;
+  bool showSubmit = false;
 
   _submit() async {
-    pp('$mm ... submit commuter request');
+    pp('\n\n$mm ... submit commuter request');
     setState(() {
       busy = true;
+      showSubmit = false;
     });
     try {
       final fcmToken = await FirebaseMessaging.instance.getToken();
@@ -138,11 +208,11 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
           .toUtc()
           .toIso8601String();
 
-      var cr = lib.CommuterRequest(
+      commuterRequest = lib.CommuterRequest(
           commuterId: commuter!.commuterId,
           commuterRequestId: Uuid().v4().toString(),
-          routeId: widget.filteredRouteDistance.routeId,
-          routeName: widget.filteredRouteDistance.routeName,
+          routeId: widget.routeId,
+          routeName: widget.routeName,
           dateRequested: DateTime.now().toUtc().toIso8601String(),
           associationId: route!.associationId!,
           dateNeeded: dateNeeded,
@@ -151,26 +221,21 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
           numberOfPassengers: numberOfPassengers);
 
       pp('$mm ..... submit commuter request, check associationId}');
-      myPrettyJsonPrint(cr.toJson());
-      pp('$mm ..... subscribe to dispatch stream... associationId: ${route!.associationId!}');
+      myPrettyJsonPrint(commuterRequest!.toJson());
+      pp('$mm ..... subscribe to route dispatch stream... route!d: ${route!.routeId!}');
 
-      await fcm.subscribeForCommuterDispatch("Dispatch", cr.associationId!);
-      var res = await dataApiDog.addCommuterRequest(cr);
-      fcm.addCommuterRequest(cr);
+      await fcm.subscribeForRouteDispatch(
+          "Dispatch", commuterRequest!.routeId!);
+
+      var res = await dataApiDog.addCommuterRequest(commuterRequest!);
+      fcm.addCommuterRequest(commuterRequest!);
+      pp('$mm 🥬🥬🥬 CommuterRequest added to database and subscribed to route dispatch topic  🥬🥬🥬 route!d: ${route!.routeId!}');
 
       if (mounted) {
         showOKToast(
             toastGravity: ToastGravity.BOTTOM,
             message: 'Taxi request has been sent successfully',
             context: context);
-      }
-      if (mounted) {
-        Navigator.of(context).pop();
-        NavigationUtils.navigateTo(
-            context: context,
-            widget: ResponseWidget(
-              commuterRequest: cr,
-            ));
       }
     } catch (e, s) {
       pp('$e $s');
@@ -192,7 +257,6 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
       time.minute,
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -219,7 +283,7 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
           child: Stack(
         children: [
           Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            // mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text('Route'),
@@ -229,8 +293,9 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
                     elevation: 8,
                     child: Padding(
                       padding: EdgeInsets.all(16),
-                      child: Text(widget.filteredRouteDistance.routeName,
-                          style: myTextStyle(fontSize: 16, weight: FontWeight.w900)),
+                      child: Text(widget.routeName,
+                          style: myTextStyle(
+                              fontSize: 16, weight: FontWeight.w900)),
                     )),
               ),
               gapH32,
@@ -250,7 +315,7 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
                           fontSize: 48,
                           color: Colors.grey),
                     ),
-              gapH32,
+              gapH16,
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -298,58 +363,80 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
                 ],
               ),
               gapH32,
-              gapH32,
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 300,
-                    child: ElevatedButton(
-                      style: ButtonStyle(
-                        elevation: WidgetStatePropertyAll(4),
-                        backgroundColor: WidgetStatePropertyAll(Colors.grey),
-                      ),
-                      onPressed: () {
-                        _getDate();
-                      },
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text(
-                          'Set Request Date',
-                          style: myTextStyle(fontSize: 16, color: Colors.white),
+              showSubmit
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 300,
+                          child: ElevatedButton(
+                            style: ButtonStyle(
+                              elevation: WidgetStatePropertyAll(4),
+                              backgroundColor:
+                                  WidgetStatePropertyAll(Colors.grey),
+                            ),
+                            onPressed: () {
+                              _getDate();
+                            },
+                            child: Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Text(
+                                'Set Request Date',
+                                style: myTextStyle(
+                                    fontSize: 16, color: Colors.white),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                      ],
+                    )
+                  : gapW32,
               gapH32,
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 300,
-                    child: ElevatedButton(
-                      style: ButtonStyle(
-                        elevation: WidgetStatePropertyAll(8),
-                        backgroundColor: WidgetStatePropertyAll(Colors.blue),
-                      ),
-                      onPressed: () {
-                        _submit();
-                      },
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text(
-                          'Submit Taxi Request',
-                          style: myTextStyle(fontSize: 20, color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  )
-                ],
-              )
+              showSubmit
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 300,
+                          child: ElevatedButton(
+                            style: ButtonStyle(
+                              elevation: WidgetStatePropertyAll(8),
+                              backgroundColor:
+                                  WidgetStatePropertyAll(Colors.blue),
+                            ),
+                            onPressed: () {
+                              _submit();
+                            },
+                            child: Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Text(
+                                'Submit Taxi Request',
+                                style: myTextStyle(
+                                    fontSize: 20, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        )
+                      ],
+                    )
+                  : gapW32,
             ],
           ),
+          showRouteDispatches
+              ? Positioned(
+                  bottom: 16,
+                  right: 8,
+                  left: 8,
+                  child: Card(
+                    elevation: 8,
+                    child: Padding(
+                      padding: EdgeInsets.all(8),
+                      child: RouteDispatches(
+                        dispatches: dispatches,
+                      ),
+                    ),
+                  ))
+              : gapW32,
           busy
               ? Positioned(
                   child: Center(
@@ -361,5 +448,76 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
         ],
       )),
     );
+  }
+
+  bool showRouteDispatches = false;
+}
+
+class RouteDispatches extends StatelessWidget {
+  const RouteDispatches({super.key, required this.dispatches});
+
+  final List<lib.DispatchRecord> dispatches;
+
+  @override
+  Widget build(BuildContext context) {
+    final DateFormat df = DateFormat.Hm();
+
+    return SizedBox(
+        height: 400,
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Text(
+                  'Taxis dispatched in the last hour',
+                  style:
+                      myTextStyle(color: Colors.blue, weight: FontWeight.w900),
+                ),
+                bd.Badge(
+                  badgeContent: Text(
+                    '${dispatches.length}',
+                    style: myTextStyle(color: Colors.white),
+                  ),
+                  badgeStyle: bd.BadgeStyle(
+                      badgeColor: Colors.green.shade800,
+                      padding: EdgeInsets.all(16)),
+                )
+              ],
+            ),
+            Expanded(
+              child: ListView.builder(
+                  itemCount: dispatches.length,
+                  itemBuilder: (ctx, index) {
+                    var d = dispatches[index];
+                    var date = df.format(DateTime.parse(d.created!).toLocal());
+                    return Card(
+                        elevation: 8,
+                        child: Padding(
+                          padding: EdgeInsets.all(8),
+                          child: Row(
+                            children: [
+                              Text(
+                                '${d.vehicleReg}',
+                                style: myTextStyle(
+                                    weight: FontWeight.w900, fontSize: 18),
+                              ),
+                              gapW8,
+                              Text('Dispatched at'),
+                              gapW16,
+                              Text(
+                                date,
+                                style: myTextStyle(
+                                    color: Colors.blue,
+                                    weight: FontWeight.w900,
+                                    fontSize: 18),
+                              ),
+                            ],
+                          ),
+                        ));
+                  }),
+            )
+          ],
+        ));
   }
 }
