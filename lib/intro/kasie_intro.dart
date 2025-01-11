@@ -2,6 +2,7 @@ import 'package:dots_indicator/dots_indicator.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:kasie_transie_commuter_2025/ui/commuter_dashboard.dart';
 import 'package:kasie_transie_library/auth/phone_auth_signin2.dart';
 import 'package:kasie_transie_library/bloc/app_auth.dart';
 import 'package:kasie_transie_library/bloc/data_api_dog.dart';
@@ -64,7 +65,7 @@ class KasieIntroState extends State<KasieIntro>
       pp('$mm _getAuthenticationStatus .......  '
           '🥬🥬🥬auth is DEFINITELY authenticated and OK, will navigate to dashboard ...');
       authed = true;
-      _navigateToDashboard();
+      _navigateToCommuterDashboard();
     } else {
       pp('$mm _getAuthenticationStatus ....... NOT AUTHENTICATED! '
           '🌼🌼🌼 ... will clean house!!');
@@ -163,7 +164,7 @@ class KasieIntroState extends State<KasieIntro>
       await Permission.location.request();
     }
     commuter = prefs.getCommuter();
-    _navigateToDashboard();
+    _navigateToCommuterDashboard();
   }
 
   void _onPageChanged(int value) {
@@ -173,14 +174,14 @@ class KasieIntroState extends State<KasieIntro>
     });
   }
 
-  _navigateToDashboard() async {
+  _navigateToCommuterDashboard() async {
     fcmService.initialize();
     await Future.delayed(const Duration(milliseconds: 500));
-    pp('$mm _navigateToMarshalDashboard ...');
+    pp('$mm _navigateToNearestRoutes ...');
     if (mounted) {
       NavigationUtils.navigateTo(
         context: context,
-        widget: CommuterNearestRoutes(),
+        widget: CommuterDashboard(),
       );
     }
   }

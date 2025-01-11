@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:badges/badges.dart' as bd;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -18,7 +19,6 @@ import 'package:kasie_transie_library/utils/navigator_utils.dart';
 import 'package:kasie_transie_library/utils/prefs.dart';
 import 'package:kasie_transie_library/widgets/timer_widget.dart';
 import 'package:uuid/uuid.dart';
-import 'package:badges/badges.dart' as bd;
 
 class CommuterRequestHandler extends StatefulWidget {
   const CommuterRequestHandler({
@@ -57,13 +57,14 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
     _getDate();
     _getRoute();
     _startTimer();
+    _getDispatches();
   }
 
   List<lib.DispatchRecord> dispatches = [];
   DateFormat df = DateFormat.MMMMEEEEd();
 
   _listen() {
-    dispatchSub = fcm.dispatchStream.listen((dispatchRecord) {
+    dispatchSub = fcm.routeDispatchStream.listen((dispatchRecord) {
       pp('\n\n$mm ... routeDispatchStream delivered: ${dispatchRecord.toJson()}');
       dispatches.add(dispatchRecord);
       _filterDispatchRecords(dispatches);
@@ -100,7 +101,7 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
     List<lib.DispatchRecord> filtered = [];
     DateTime now = DateTime.now().toUtc();
     for (var r in dispatchRecords) {
-      var date = DateTime.parse(r.created!!);
+      var date = DateTime.parse(r.created!);
       var difference = now.difference(date);
       pp('$mm _filterDispatchRecords difference: $difference');
 
@@ -109,11 +110,16 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
       }
     }
     pp('$mm _filterDispatchRecord filtered: ${filtered.length}');
-    filtered.sort((a, b) => b.created!.compareTo(a.created!),);
+    filtered.sort(
+      (a, b) => b.created!.compareTo(a.created!),
+    );
+
     setState(() {
       dispatches = filtered;
       showRouteDispatches = true;
     });
+    pp('$mm _filterDispatchRecord: after set state, filtered: ${dispatches.length}');
+
     return filtered;
   }
 
@@ -121,6 +127,16 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
     route = await listApiDog.getRoute(routeId: widget.routeId, refresh: false);
     pp('$mm route from routeId: ${route!.name}');
     myPrettyJsonPrint(route!.toJson());
+  }
+
+  _getDispatches() async {
+    pp('$mm _getDispatches ......}');
+
+    var date = DateTime.now().toUtc().subtract(const Duration(hours: 1));
+    var list = await listApiDog.getRouteDispatchRecords(
+        routeId: widget.routeId, startDate: date.toIso8601String());
+    pp('$mm dispatches found: ${list.length}');
+    _filterDispatchRecords(list);
   }
 
   @override
@@ -225,7 +241,7 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
       pp('$mm ..... subscribe to route dispatch stream... route!d: ${route!.routeId!}');
 
       await fcm.subscribeForRouteDispatch(
-          "Dispatch", commuterRequest!.routeId!);
+          "Commuter", commuterRequest!.routeId!);
 
       var res = await dataApiDog.addCommuterRequest(commuterRequest!);
       fcm.addCommuterRequest(commuterRequest!);
@@ -262,6 +278,7 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+          leading: gapH32,
           title: Text(
             'Commuter Request',
             style: myTextStyle(),
@@ -437,6 +454,25 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
                     ),
                   ))
               : gapW32,
+          Positioned(
+            bottom: 2,
+            right: 2,
+            child: SizedBox(
+              width: 100,
+              child: ElevatedButton(
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStatePropertyAll(Colors.grey),
+                    elevation: WidgetStatePropertyAll(8),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(
+                    'Done',
+                    style: myTextStyle(color: Colors.white),
+                  )),
+            ),
+          ),
           busy
               ? Positioned(
                   child: Center(
@@ -463,16 +499,18 @@ class RouteDispatches extends StatelessWidget {
     final DateFormat df = DateFormat.Hm();
 
     return SizedBox(
-        height: 400,
+        height: 300,
         child: Column(
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 Text(
-                  'Taxis dispatched in the last hour',
-                  style:
-                      myTextStyle(color: Colors.blue, weight: FontWeight.w900),
+                  'Dispatched in the last hour',
+                  style: myTextStyle(
+                      color: Colors.blue,
+                      weight: FontWeight.normal,
+                      fontSize: 18),
                 ),
                 bd.Badge(
                   badgeContent: Text(
@@ -497,13 +535,19 @@ class RouteDispatches extends StatelessWidget {
                           padding: EdgeInsets.all(8),
                           child: Row(
                             children: [
-                              Text(
-                                '${d.vehicleReg}',
-                                style: myTextStyle(
-                                    weight: FontWeight.w900, fontSize: 18),
+                              SizedBox(
+                                width: 100,
+                                child: Text(
+                                  '${d.vehicleReg}',
+                                  style: myTextStyle(
+                                      weight: FontWeight.w900, fontSize: 18),
+                                ),
                               ),
                               gapW8,
-                              Text('Dispatched at'),
+                              SizedBox(
+                                width: 100,
+                                child: Text('Dispatched at'),
+                              ),
                               gapW16,
                               Text(
                                 date,
