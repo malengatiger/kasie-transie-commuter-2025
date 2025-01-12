@@ -116,7 +116,6 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
 
     setState(() {
       dispatches = filtered;
-      showRouteDispatches = true;
     });
     pp('$mm _filterDispatchRecord: after set state, filtered: ${dispatches.length}');
 
@@ -131,7 +130,6 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
 
   _getDispatches() async {
     pp('$mm _getDispatches ......}');
-
     var date = DateTime.now().toUtc().subtract(const Duration(hours: 1));
     var list = await listApiDog.getRouteDispatchRecords(
         routeId: widget.routeId, startDate: date.toIso8601String());
@@ -261,6 +259,7 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
     }
     setState(() {
       busy = false;
+      showRouteDispatches = true;
     });
   }
 
@@ -315,7 +314,7 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
                               fontSize: 16, weight: FontWeight.w900)),
                     )),
               ),
-              gapH32,
+              gapH16,
               dateTime == null
                   ? gapW32
                   : Text(
@@ -499,7 +498,7 @@ class RouteDispatches extends StatelessWidget {
     final DateFormat df = DateFormat.Hm();
 
     return SizedBox(
-        height: 300,
+        height: 400,
         child: Column(
           children: [
             Row(

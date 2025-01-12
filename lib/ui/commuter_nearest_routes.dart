@@ -207,14 +207,14 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
                   gapH32,
                   Expanded(
                       child: bd.Badge(
-                    position: bd.BadgePosition.topEnd(top: -36, end: 8),
+                    position: bd.BadgePosition.topEnd(top: -36, end: 20),
                     badgeContent: Text(
                       '${nearestRoutes.length}',
                       style: myTextStyle(color: Colors.white),
                     ),
                     badgeStyle: bd.BadgeStyle(
                         elevation: 8,
-                        badgeColor: Colors.green,
+                        badgeColor: Colors.pink,
                         padding: EdgeInsets.all(16)),
                     child: Padding(
                       padding: EdgeInsets.all(16),
@@ -234,7 +234,7 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
                                       frd.route.routeId!, frd.route.name!);
                                 },
                                 child: Card(
-                                    elevation: 8,
+                                    elevation: 8, color: Colors.yellow.shade50,
                                     child: Column(
                                       children: [
                                         Padding(
