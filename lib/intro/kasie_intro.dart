@@ -41,8 +41,7 @@ class KasieIntroState extends State<KasieIntro>
   Prefs prefs = GetIt.instance<Prefs>();
   final DataApiDog dataApiDog = GetIt.instance<DataApiDog>();
   AppAuth appAuth = GetIt.instance<AppAuth>();
-  final FCMService fcmService =
-      GetIt.instance<FCMService>();
+  final FCMService fcmService = GetIt.instance<FCMService>();
 
   // mrm.User? user;
   String? signInFailed;
@@ -55,13 +54,12 @@ class KasieIntroState extends State<KasieIntro>
     _getAuthenticationStatus();
   }
 
-
   void _getAuthenticationStatus() async {
     pp('\n\n$mm _getAuthenticationStatus ....... '
         'check both Firebase user and Kasie user');
 
     commuter = prefs.getCommuter();
-    if (commuter != null ) {
+    if (commuter != null) {
       pp('$mm _getAuthenticationStatus .......  '
           '🥬🥬🥬auth is DEFINITELY authenticated and OK, will navigate to dashboard ...');
       authed = true;
@@ -86,7 +84,7 @@ class KasieIntroState extends State<KasieIntro>
 
   static const tag = 'commuter';
   static const pass = 'pass123';
- bool busy = false;
+  bool busy = false;
   onSignInWithEmail() async {
     pp('\n\n$mm ...  onSignInWithEmail, create and sign in commuter');
     var id = Uuid().v4().toString();
@@ -106,18 +104,19 @@ class KasieIntroState extends State<KasieIntro>
         countryId: null,
         dateRegistered: DateTime.now().toUtc().toIso8601String(),
         qrCodeUrl: null,
-        email: email, password:  pass,
+        email: email,
+        password: pass,
         fcmToken: token);
 
-
     try {
-
       pp('$mm ...  onSignInWithEmail, commuter to create: ${commuter.toJson()}');
       var res = await dataApiDog.addCommuter(commuter);
+      pp('$mm ...  onSignInWithEmail, created; check qrcode url: ${res.toJson()}');
       prefs.saveCommuter(res);
-      pp('$mm ...  onSignInWithEmail, commuter: ${res.toJson()}');
       if (mounted) {
-        showOKToast(message: 'Commuter signed in successfully. Welcome aboard!', context: context);
+        showOKToast(
+            message: 'Commuter signed in successfully. Welcome aboard!',
+            context: context);
       }
       onSuccessfulSignIn();
     } catch (e, s) {
@@ -208,7 +207,6 @@ class KasieIntroState extends State<KasieIntro>
           'KasieTransie Commuter',
           style: myTextStyle(),
         ),
-
       ),
       body: Stack(
         children: [
@@ -242,8 +240,10 @@ class KasieIntroState extends State<KasieIntro>
             ],
           ),
           Positioned(
-            bottom: 2, left: 48, right: 48,
-            child:  SizedBox(
+            bottom: 2,
+            left: 48,
+            right: 48,
+            child: SizedBox(
                 width: 300,
                 child: Padding(
                   padding: EdgeInsets.all(24),
@@ -259,7 +259,6 @@ class KasieIntroState extends State<KasieIntro>
                         style: myTextStyle(fontSize: 20, color: Colors.white),
                       )),
                 )),
-
           ),
           Positioned(
             bottom: 88,
@@ -294,7 +293,14 @@ class KasieIntroState extends State<KasieIntro>
               ),
             ),
           ),
-          busy? Positioned(child: Center(child: TimerWidget(title: 'Authenticating ...', isSmallSize: true,))): gapH32,
+          busy
+              ? Positioned(
+                  child: Center(
+                      child: TimerWidget(
+                  title: 'Authenticating ...',
+                  isSmallSize: true,
+                )))
+              : gapH32,
         ],
       ),
     ));

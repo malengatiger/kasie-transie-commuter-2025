@@ -4,6 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get_it/get_it.dart';
 import 'package:kasie_transie_commuter_2025/ui/commuter_nearest_routes.dart';
 import 'package:kasie_transie_commuter_2025/ui/find_routes_by_city.dart';
+import 'package:kasie_transie_library/bloc/list_api_dog.dart';
 import 'package:kasie_transie_library/data/data_schemas.dart';
 import 'package:kasie_transie_library/utils/functions.dart';
 import 'package:kasie_transie_library/utils/navigator_utils.dart';
@@ -48,9 +49,24 @@ class CommuterDashboardState extends State<CommuterDashboard>
     if (creds.user != null) {
       pp('$mm commuter signed in: ${creds.user!.uid}');
     }
+    _getCommuterData();
     setState(() {});
   }
 
+  ListApiDog listApiDog = GetIt.instance<ListApiDog>();
+  List<CommuterRequest> requests = [];
+  bool busy = false;
+  _getCommuterData() async {
+    setState(() {
+      busy = true;
+    });
+
+    requests = await listApiDog.getCommuterRequestsFromBackend(commuter!.commuterId!);
+
+    setState(() {
+      busy = false;
+    });
+  }
   _navigateToFindByCity() {
     pp('$mm _navigateToFindByCity');
     NavigationUtils.navigateTo(context: context, widget: FindRoutesByCity());
@@ -110,42 +126,43 @@ class CommuterDashboardState extends State<CommuterDashboard>
                               crossAxisCount: 2),
                       children: [
                         Card(
-                          elevation: 8,
+                          elevation: 2,
                           child: Center(
                             child: NumberAndCaption(
                               caption: "Requests",
-                              number: 0,
-                              fontSize: 28,
+                              number: requests.length,
+                              fontSize: 18,
                             ),
                           ),
                         ),
                         Card(
-                          elevation: 8,
+                          elevation: 2,
                           child: Center(
                             child: NumberAndCaption(
-                              caption: "Tickets",
+                              caption: "Tickets", color: Colors.black,
                               number: 0,
-                              fontSize: 28,
+                              fontSize: 18,
                             ),
                           ),
                         ),
                         Card(
-                          elevation: 8,
+                          elevation: 2,
                           child: Center(
                             child: NumberAndCaption(
                               caption: "Points",
-                              number: 0,
-                              fontSize: 28,
+                              number: 0, color: Colors.blue,
+                              fontSize: 18,
                             ),
                           ),
                         ),
                         Card(
-                          elevation: 8,
+                          elevation: 2,
                           child: Center(
                             child: NumberAndCaption(
                               caption: "PickUps",
                               number: 0,
-                              fontSize: 28,
+                              color: Colors.green,
+                              fontSize: 18,
                             ),
                           ),
                         ),

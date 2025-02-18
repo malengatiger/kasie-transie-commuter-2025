@@ -8,7 +8,7 @@ class SplashWidget extends StatefulWidget {
 }
 
 class _SplashWidgetState extends State<SplashWidget> {
-  static const mm = '💠💠💠💠💠💠💠💠 SplashWidget';
+  static const mm = '💠💠💠💠💠💠 SplashWidget';
 
   @override
   void initState() {
@@ -40,7 +40,7 @@ class _SplashWidgetState extends State<SplashWidget> {
               ),
               Center(
                 child: Image.asset(
-                  'assets/gio.png',
+                  'assets/ktlogo_white.png',
                   height: 64,
                   width: 64,
                 ),
@@ -54,7 +54,7 @@ class _SplashWidgetState extends State<SplashWidget> {
                   // const FaIcon(FontAwesomeIcons.anchorCircleCheck),
 
                   Text(
-                    message == null ? 'We help you see more!' : message!,
+                    message == null ? 'The future of transportation!' : message!,
                     style: myTextStyleSmall(context),
                   ),
                   const SizedBox(
