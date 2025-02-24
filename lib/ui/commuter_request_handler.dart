@@ -10,6 +10,7 @@ import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
 import 'package:kasie_transie_library/bloc/data_api_dog.dart';
 import 'package:kasie_transie_library/bloc/list_api_dog.dart';
+import 'package:kasie_transie_library/data/commuter_pickup.dart';
 import 'package:kasie_transie_library/data/data_schemas.dart' as lib;
 import 'package:kasie_transie_library/maps/map_viewer.dart';
 import 'package:kasie_transie_library/messaging/fcm_bloc.dart';
@@ -65,7 +66,8 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
 
   _listen() {
     dispatchSub = fcm.routeDispatchStream.listen((dispatchRecord) {
-      pp('\n\n$mm ... routeDispatchStream delivered: ${dispatchRecord.toJson()}');
+      pp('\n\n$mm ... routeDispatchStream delivered: ${dispatchRecord
+          .toJson()}');
       dispatches.add(dispatchRecord);
       _filterDispatchRecords(dispatches);
       if (mounted) {
@@ -77,7 +79,9 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
             duration: const Duration(seconds: 5),
             toastGravity: ToastGravity.BOTTOM,
             message:
-                'Taxi ${dispatchRecord.vehicleReg} has been dispatched at ${df.format(DateTime.parse(dispatchRecord.created!))} on the route you requested',
+            'Taxi ${dispatchRecord.vehicleReg} has been dispatched at ${df
+                .format(DateTime.parse(
+                dispatchRecord.created!))} on the route you requested',
             context: context);
       }
     });
@@ -111,13 +115,14 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
     }
     pp('$mm _filterDispatchRecord filtered: ${filtered.length}');
     filtered.sort(
-      (a, b) => b.created!.compareTo(a.created!),
+          (a, b) => b.created!.compareTo(a.created!),
     );
 
     setState(() {
       dispatches = filtered;
     });
-    pp('$mm _filterDispatchRecord: after set state, filtered: ${dispatches.length}');
+    pp('$mm _filterDispatchRecord: after set state, filtered: ${dispatches
+        .length}');
 
     return filtered;
   }
@@ -187,7 +192,7 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
         if (mounted) {
           showErrorToast(
               message:
-                  'Date and Time needed should be later than the request time now',
+              'Date and Time needed should be later than the request time now',
               context: context);
         }
         _getDate();
@@ -236,14 +241,17 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
 
       pp('$mm ..... submit commuter request, check associationId}');
       myPrettyJsonPrint(commuterRequest!.toJson());
-      pp('$mm ..... subscribe to route dispatch stream... route!d: ${route!.routeId!}');
+      pp('$mm ..... subscribe to route dispatch stream... route!d: ${route!
+          .routeId!}');
 
       await fcm.subscribeForRouteDispatch(
           "Commuter", commuterRequest!.routeId!);
 
       var res = await dataApiDog.addCommuterRequest(commuterRequest!);
       fcm.addCommuterRequest(commuterRequest!);
-      pp('$mm 🥬🥬🥬 CommuterRequest added to database and subscribed to route dispatch topic  🥬🥬🥬 route!d: ${route!.routeId!}');
+      pp(
+          '$mm 🥬🥬🥬 CommuterRequest added to database and subscribed to route dispatch topic  🥬🥬🥬 route!d: ${route!
+              .routeId!}');
 
       if (mounted) {
         showOKToast(
@@ -272,6 +280,20 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
       time.minute,
     );
   }
+  _processDispatch(lib.DispatchRecord dispatchRecord) async {
+
+    var loc = await dlb.getLocation();
+    var pos = lib.Position(coordinates: [loc.longitude, loc.latitude], type: "Point");
+    var comm = prefs.getCommuter();
+    var pu = CommuterPickUp(commuterPickUpId: DateTime.now().toUtc().toIso8601String(),
+        vehicleId: dispatchRecord.vehicleId, vehicleReg: dispatchRecord.vehicleReg,
+        commuterRequestId: commuterRequest!.commuterRequestId, commuterId: commuterRequest!.commuterId,
+        commuterEmail: comm!.email,
+        associationId: dispatchRecord.associationId, associationName: dispatchRecord.associationName, position: pos);
+    if (mounted) {
+      showOKToast(message: 'PickUp feature under construction', context: context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -297,191 +319,196 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
           ]),
       body: SafeArea(
           child: Stack(
-        children: [
-          Column(
-            // mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text('Route'),
-              Padding(
-                padding: EdgeInsets.all(16),
-                child: Card(
-                    elevation: 8,
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text(widget.routeName,
-                          style: myTextStyle(
-                              fontSize: 16, weight: FontWeight.w900)),
-                    )),
-              ),
-              gapH16,
-              dateTime == null
-                  ? gapW32
-                  : Text(
-                      dateFormat.format(dateTime!),
-                      style: myTextStyle(weight: FontWeight.bold, fontSize: 28),
-                    ),
-              gapH32,
-              timeOfDay == null
-                  ? gapW32
-                  : Text(
-                      '${timeOfDay!.hour}:${timeOfDay!.minute}  ${timeOfDay!.period.name.toUpperCase()}',
-                      style: myTextStyle(
-                          weight: FontWeight.w900,
-                          fontSize: 48,
-                          color: Colors.grey),
-                    ),
-              gapH16,
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              Column(
+                // mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  gapW16,
-                  const Text('Number of Passengers'),
-                  gapW16,
-                  DropdownButton<int>(
-                      dropdownColor: Colors.white,
-                      items: [
-                        DropdownMenuItem<int>(value: 1, child: Text('1')),
-                        DropdownMenuItem<int>(value: 2, child: Text('2')),
-                        DropdownMenuItem<int>(value: 3, child: Text('3')),
-                        DropdownMenuItem<int>(value: 4, child: Text('4')),
-                        DropdownMenuItem<int>(value: 5, child: Text('5')),
-                        DropdownMenuItem<int>(value: 6, child: Text('6')),
-                        DropdownMenuItem<int>(value: 7, child: Text('7')),
-                        DropdownMenuItem<int>(value: 8, child: Text('8')),
-                        DropdownMenuItem<int>(value: 9, child: Text('9')),
-                        DropdownMenuItem<int>(value: 10, child: Text('10')),
-                        DropdownMenuItem<int>(value: 11, child: Text('11')),
-                        DropdownMenuItem<int>(value: 12, child: Text('12')),
-                        DropdownMenuItem<int>(value: 13, child: Text('13')),
-                        DropdownMenuItem<int>(value: 14, child: Text('14')),
-                        DropdownMenuItem<int>(value: 15, child: Text('15')),
-                        DropdownMenuItem<int>(value: 16, child: Text('16')),
-                        DropdownMenuItem<int>(value: 17, child: Text('17')),
-                        DropdownMenuItem<int>(value: 18, child: Text('18')),
-                        DropdownMenuItem<int>(value: 19, child: Text('19')),
-                        DropdownMenuItem<int>(value: 20, child: Text('20')),
-                      ],
-                      onChanged: (number) {
-                        setState(() {
-                          if (number != null) {
-                            numberOfPassengers = number;
-                          }
-                        });
-                      }),
-                  gapW32,
-                  Text('$numberOfPassengers',
-                      style: myTextStyle(
-                          fontSize: 36,
-                          weight: FontWeight.w900,
-                          color: Colors.red)),
-                  gapW32,
-                ],
-              ),
-              gapH32,
-              showSubmit
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 300,
-                          child: ElevatedButton(
-                            style: ButtonStyle(
-                              elevation: WidgetStatePropertyAll(4),
-                              backgroundColor:
-                                  WidgetStatePropertyAll(Colors.grey),
-                            ),
-                            onPressed: () {
-                              _getDate();
-                            },
-                            child: Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Text(
-                                'Set Request Date',
-                                style: myTextStyle(
-                                    fontSize: 16, color: Colors.white),
-                              ),
+                  Text('Route'),
+                  Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Card(
+                        elevation: 8,
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text(widget.routeName,
+                              style: myTextStyle(
+                                  fontSize: 16, weight: FontWeight.w900)),
+                        )),
+                  ),
+                  gapH16,
+                  dateTime == null
+                      ? gapW32
+                      : Text(
+                    dateFormat.format(dateTime!),
+                    style: myTextStyle(weight: FontWeight.bold, fontSize: 28),
+                  ),
+                  gapH32,
+                  timeOfDay == null
+                      ? gapW32
+                      : Text(
+                    '${timeOfDay!.hour}:${timeOfDay!.minute}  ${timeOfDay!
+                        .period
+                        .name.toUpperCase()}',
+                    style: myTextStyle(
+                        weight: FontWeight.w900,
+                        fontSize: 48,
+                        color: Colors.grey),
+                  ),
+                  gapH16,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      gapW16,
+                      const Text('Number of Passengers'),
+                      gapW16,
+                      DropdownButton<int>(
+                          dropdownColor: Colors.white,
+                          items: [
+                            DropdownMenuItem<int>(value: 1, child: Text('1')),
+                            DropdownMenuItem<int>(value: 2, child: Text('2')),
+                            DropdownMenuItem<int>(value: 3, child: Text('3')),
+                            DropdownMenuItem<int>(value: 4, child: Text('4')),
+                            DropdownMenuItem<int>(value: 5, child: Text('5')),
+                            DropdownMenuItem<int>(value: 6, child: Text('6')),
+                            DropdownMenuItem<int>(value: 7, child: Text('7')),
+                            DropdownMenuItem<int>(value: 8, child: Text('8')),
+                            DropdownMenuItem<int>(value: 9, child: Text('9')),
+                            DropdownMenuItem<int>(value: 10, child: Text('10')),
+                            DropdownMenuItem<int>(value: 11, child: Text('11')),
+                            DropdownMenuItem<int>(value: 12, child: Text('12')),
+                            DropdownMenuItem<int>(value: 13, child: Text('13')),
+                            DropdownMenuItem<int>(value: 14, child: Text('14')),
+                            DropdownMenuItem<int>(value: 15, child: Text('15')),
+                            DropdownMenuItem<int>(value: 16, child: Text('16')),
+                            DropdownMenuItem<int>(value: 17, child: Text('17')),
+                            DropdownMenuItem<int>(value: 18, child: Text('18')),
+                            DropdownMenuItem<int>(value: 19, child: Text('19')),
+                            DropdownMenuItem<int>(value: 20, child: Text('20')),
+                          ],
+                          onChanged: (number) {
+                            setState(() {
+                              if (number != null) {
+                                numberOfPassengers = number;
+                              }
+                            });
+                          }),
+                      gapW32,
+                      Text('$numberOfPassengers',
+                          style: myTextStyle(
+                              fontSize: 36,
+                              weight: FontWeight.w900,
+                              color: Colors.red)),
+                      gapW32,
+                    ],
+                  ),
+                  gapH32,
+                  showSubmit
+                      ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 300,
+                        child: ElevatedButton(
+                          style: ButtonStyle(
+                            elevation: WidgetStatePropertyAll(4),
+                            backgroundColor:
+                            WidgetStatePropertyAll(Colors.grey),
+                          ),
+                          onPressed: () {
+                            _getDate();
+                          },
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(
+                              'Set Request Date',
+                              style: myTextStyle(
+                                  fontSize: 16, color: Colors.white),
                             ),
                           ),
                         ),
-                      ],
-                    )
-                  : gapW32,
-              gapH32,
-              showSubmit
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 300,
-                          child: ElevatedButton(
-                            style: ButtonStyle(
-                              elevation: WidgetStatePropertyAll(8),
-                              backgroundColor:
-                                  WidgetStatePropertyAll(Colors.blue),
-                            ),
-                            onPressed: () {
-                              _submit();
-                            },
-                            child: Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Text(
-                                'Submit Taxi Request',
-                                style: myTextStyle(
-                                    fontSize: 20, color: Colors.white),
-                              ),
+                      ),
+                    ],
+                  )
+                      : gapW32,
+                  gapH32,
+                  showSubmit
+                      ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 300,
+                        child: ElevatedButton(
+                          style: ButtonStyle(
+                            elevation: WidgetStatePropertyAll(8),
+                            backgroundColor:
+                            WidgetStatePropertyAll(Colors.blue),
+                          ),
+                          onPressed: () {
+                            _submit();
+                          },
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(
+                              'Submit Taxi Request',
+                              style: myTextStyle(
+                                  fontSize: 20, color: Colors.white),
                             ),
                           ),
-                        )
-                      ],
-                    )
-                  : gapW32,
-            ],
-          ),
-          showRouteDispatches
-              ? Positioned(
+                        ),
+                      )
+                    ],
+                  )
+                      : gapW32,
+                ],
+              ),
+              showRouteDispatches
+                  ? Positioned(
                   bottom: 16,
                   right: 8,
                   left: 8,
-                  child: Card(
+                  child: SizedBox(height: 240, child: Card(
                     elevation: 8,
                     child: Padding(
                       padding: EdgeInsets.all(8),
                       child: RouteDispatches(
-                        dispatches: dispatches,
+                        dispatches: dispatches, onDispatchSelected: (dispRecord ) {
+                          _processDispatch(dispRecord);
+                      },
                       ),
                     ),
-                  ))
-              : gapW32,
-          Positioned(
-            bottom: 2,
-            right: 2,
-            child: SizedBox(
-              width: 100,
-              child: ElevatedButton(
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStatePropertyAll(Colors.grey),
-                    elevation: WidgetStatePropertyAll(8),
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text(
-                    'Done',
-                    style: myTextStyle(color: Colors.white),
-                  )),
-            ),
-          ),
-          busy
-              ? Positioned(
+                  ),)
+              )
+                  : gapW32,
+              Positioned(
+                bottom: 2,
+                right: 2,
+                child: SizedBox(
+                  width: 100,
+                  child: ElevatedButton(
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStatePropertyAll(Colors.grey),
+                        elevation: WidgetStatePropertyAll(8),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: Text(
+                        'Done',
+                        style: myTextStyle(color: Colors.white),
+                      )),
+                ),
+              ),
+              busy
+                  ? Positioned(
                   child: Center(
                       child: TimerWidget(
-                  title: 'Requesting taxi ...',
-                  isSmallSize: true,
-                )))
-              : gapH32,
-        ],
-      )),
+                        title: 'Requesting taxi ...',
+                        isSmallSize: true,
+                      )))
+                  : gapH32,
+            ],
+          )),
     );
   }
 
@@ -489,9 +516,10 @@ class CommuterRequestHandlerState extends State<CommuterRequestHandler>
 }
 
 class RouteDispatches extends StatelessWidget {
-  const RouteDispatches({super.key, required this.dispatches});
+  const RouteDispatches({super.key, required this.dispatches, required this.onDispatchSelected});
 
   final List<lib.DispatchRecord> dispatches;
+  final Function(lib.DispatchRecord) onDispatchSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -528,36 +556,41 @@ class RouteDispatches extends StatelessWidget {
                   itemBuilder: (ctx, index) {
                     var d = dispatches[index];
                     var date = df.format(DateTime.parse(d.created!).toLocal());
-                    return Card(
-                        elevation: 8,
-                        child: Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 100,
-                                child: Text(
-                                  '${d.vehicleReg}',
-                                  style: myTextStyle(
-                                      weight: FontWeight.w900, fontSize: 18),
+                    return GestureDetector(
+                      onTap: (){
+                        onDispatchSelected(d);
+                      },
+                      child: Card(
+                          elevation: 8,
+                          child: Padding(
+                            padding: EdgeInsets.all(8),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 124,
+                                  child: Text(
+                                    '${d.vehicleReg}',
+                                    style: myTextStyle(
+                                        weight: FontWeight.w900, fontSize: 18),
+                                  ),
                                 ),
-                              ),
-                              gapW8,
-                              SizedBox(
-                                width: 100,
-                                child: Text('Dispatched at'),
-                              ),
-                              gapW16,
-                              Text(
-                                date,
-                                style: myTextStyle(
-                                    color: Colors.blue,
-                                    weight: FontWeight.w900,
-                                    fontSize: 18),
-                              ),
-                            ],
-                          ),
-                        ));
+                                gapW8,
+                                SizedBox(
+                                  width: 80,
+                                  child: Text('Dispatched:'),
+                                ),
+                                gapW16,
+                                Text(
+                                  date,
+                                  style: myTextStyle(
+                                      color: Colors.blue,
+                                      weight: FontWeight.w900,
+                                      fontSize: 18),
+                                ),
+                              ],
+                            ),
+                          )),
+                    );
                   }),
             )
           ],

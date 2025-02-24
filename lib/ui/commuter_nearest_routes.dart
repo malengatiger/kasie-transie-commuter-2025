@@ -50,14 +50,14 @@ class CommuterNearestRoutesState extends State<CommuterNearestRoutes>
   List<lib.Route> commuterRoutes = [];
 
   _getCommuterRoutes() async {
-    pp('$mm _getCommuterRoutes from prefs ...');
+    pp('$mm ................. _getCommuterRoutes from prefs ...');
     setState(() {
       busy = true;
     });
     commuterRoutes = await prefs.getCommuterRoutes();
     pp('$mm _getCommuterRoutes from prefs : ${commuterRoutes.length}');
     setState(() {});
-    _getNearestRoutes();
+    await _getNearestRoutes();
     setState(() {
       busy = false;
     });
